@@ -3,7 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
+
+	"github.com/aquasecurity/table"
 )
 
 type Todo struct {
@@ -44,4 +48,51 @@ func (todos *Todos) delete(index int) error {
 	*todos = append(t[:index], t[index+1:]...)
 
 	return nil
+}
+
+func (todos *Todos) toggle(index int) error {
+	t := *todos
+	if err := t.validateIndex(index); err != nil {
+		return err
+	}
+
+	iscompleted := t[index].Completed
+
+	if !iscompleted {
+		completionTime := time.Now()
+		t[index].CompletedAt = &completionTime
+	}
+	t[index].Completed = !iscompleted
+
+	return nil
+}
+
+func (todos *Todos) edit(index int, newTitle string) error {
+	t := *todos
+
+	if err := t.validateIndex(index); err != nil {
+		return err
+	}
+
+	t[index].Title = newTitle
+
+	return nil
+}
+
+func (todos *Todos) print() {
+	table := table.New(os.Stdout)
+	table.SetRowLines(false)
+	table.SetHeaders("#", "Title", "completed", "created At", "completed At")
+	for i, todo := range *todos {
+		completed := "❌"
+		completedAt := ""
+		if todo.Completed {
+			completed = "✅"
+			if todo.CompletedAt != nil {
+				completedAt = todo.CompletedAt.Format(time.RFC1123)
+			}
+		}
+		table.AddRow(strconv.Itoa(i), todo.Title, completed, todo.CreatedAt.Format(time.RFC1123), completedAt)
+	}
+	table.Render()
 }
